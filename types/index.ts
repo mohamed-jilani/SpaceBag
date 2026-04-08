@@ -8,6 +8,9 @@ export interface UserProfile {
   phoneNumber?: string;
   photoURL?: string;
   createdAt: number;
+  /** Vérification d'identité (KYC) */
+  kycVerified?: boolean;
+  kycIdPhotoUrl?: string;
 }
 
 export interface Trip {
@@ -18,13 +21,13 @@ export interface Trip {
   price: number;
   maxWeight: number;
   maxParcels: number;
-  /** Poids restant disponible (décrémenté à chaque acceptation) */
+  /** Poids restant (décrémenté à chaque acceptation) */
   remainingWeight: number;
   /** Nombre de colis restants (décrémenté à chaque acceptation) */
   remainingParcels: number;
   description: string;
   carrierId: string;
-  /** 'active' = accepte des demandes, 'full' = complet, 'completed' | 'cancelled' = terminé */
+  /** active = disponible, full = complet, completed | cancelled = terminé */
   status: 'active' | 'full' | 'completed' | 'cancelled';
   createdAt: number;
 }
@@ -49,7 +52,7 @@ export interface Request {
   photoUrl?: string;
   status: RequestStatus;
   createdAt: number;
-  /** Code généré par le transporteur, stocké en Firestore, visible du membre */
+  /** Code à 6 chiffres généré par le transporteur — visible du membre */
   verificationCode?: string;
   chatId?: string;
   price?: number;
@@ -70,5 +73,16 @@ export interface Message {
   chatId: string;
   senderId: string;
   text: string;
+  createdAt: number;
+}
+
+export interface Review {
+  id: string;
+  requestId: string;
+  fromUserId: string;
+  toUserId: string;
+  /** Note de 1 à 5 */
+  rating: number;
+  comment?: string;
   createdAt: number;
 }

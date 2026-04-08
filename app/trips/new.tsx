@@ -8,7 +8,7 @@ import { useTrips } from '@/hooks/useTrips';
 
 export default function NewTripScreen() {
   const { profile } = useAuth();
-  const { createTripMutation } = useTrips();
+  const { createTrip, isCreating } = useTrips();
   const router = useRouter();
 
   const [form, setForm] = useState({
@@ -33,7 +33,7 @@ export default function NewTripScreen() {
     }
 
     try {
-      await createTripMutation.mutateAsync({
+      await createTrip({
         departure: form.departure,
         arrival: form.arrival,
         date: form.date,
@@ -120,7 +120,7 @@ export default function NewTripScreen() {
           <Button 
             variant="primary" 
             onPress={handleCreate} 
-            loading={createTripMutation.isPending}
+            loading={isCreating}
             style={styles.submitBtn}
           >
             Post Trip
