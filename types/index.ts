@@ -18,26 +18,40 @@ export interface Trip {
   price: number;
   maxWeight: number;
   maxParcels: number;
+  /** Poids restant disponible (décrémenté à chaque acceptation) */
+  remainingWeight: number;
+  /** Nombre de colis restants (décrémenté à chaque acceptation) */
+  remainingParcels: number;
   description: string;
   carrierId: string;
-  status: 'active' | 'completed' | 'cancelled';
+  /** 'active' = accepte des demandes, 'full' = complet, 'completed' | 'cancelled' = terminé */
+  status: 'active' | 'full' | 'completed' | 'cancelled';
   createdAt: number;
 }
 
-export type RequestStatus = 'pending' | 'accepted' | 'refused' | 'paid' | 'in_transit' | 'delivered';
+export type RequestStatus =
+  | 'pending'
+  | 'accepted'
+  | 'refused'
+  | 'paid'
+  | 'in_transit'
+  | 'delivered';
 
 export interface Request {
   id: string;
   tripId: string;
   memberId: string;
   carrierId: string;
+  memberDisplayName?: string;
   weight: number;
-  dimensions: string;
-  description: string;
-  photoUrl: string;
+  dimensions?: string;
+  description?: string;
+  photoUrl?: string;
   status: RequestStatus;
   createdAt: number;
+  /** Code généré par le transporteur, stocké en Firestore, visible du membre */
   verificationCode?: string;
+  chatId?: string;
   price?: number;
 }
 

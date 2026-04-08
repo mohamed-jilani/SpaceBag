@@ -1,30 +1,31 @@
 import { initializeApp } from 'firebase/app';
-import { 
-  initializeAuth, 
-  getReactNativePersistence, 
+import {
+  initializeAuth,
   browserLocalPersistence,
-  getAuth 
+  inMemoryPersistence,
+  getAuth
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD-...", // This should ideally be a secret, but I'll use the one from the prompt for now
-  authDomain: "spacebag-b73c8.firebaseapp.com",
-  projectId: "spacebag-b73c8",
-  storageBucket: "spacebag-b73c8.appspot.com",
-  messagingSenderId: "1037056580750095",
-  appId: "1:1037056580750095:web:6cbeeef584de1984c7de33cc5e31187a"
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  databaseURL: process.env.EXPO_PUBLIC_FIREBASE_DATABASE_URL,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
 const app = initializeApp(firebaseConfig);
 
 // Initialize Auth with persistence based on platform
 export const auth = initializeAuth(app, {
-  persistence: Platform.OS === 'web' 
-    ? browserLocalPersistence 
-    : getReactNativePersistence(AsyncStorage)
+  persistence: Platform.OS === 'web'
+    ? browserLocalPersistence
+    : inMemoryPersistence
 });
 
 export const db = getFirestore(app);

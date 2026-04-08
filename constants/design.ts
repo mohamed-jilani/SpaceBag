@@ -94,6 +94,9 @@ export const colors = {
   overlayLight: 'rgba(0, 0, 0, 0.3)',
   overlayDark: 'rgba(0, 0, 0, 0.7)',
 
+  // Surface Colors
+  surface: '#1E293B',
+
   // Special Colors
   white: '#FFFFFF',
   black: '#000000',
@@ -195,9 +198,21 @@ export const typography = {
     lineHeight: 16,
     letterSpacing: 0,
   },
+  bodySmall: {
+    fontSize: 14,
+    fontWeight: '400' as const,
+    lineHeight: 20,
+    letterSpacing: 0,
+  },
   tiny: {
     fontSize: 10,
     fontWeight: '400' as const,
+    lineHeight: 12,
+    letterSpacing: 0,
+  },
+  tinyBold: {
+    fontSize: 10,
+    fontWeight: '600' as const,
     lineHeight: 12,
     letterSpacing: 0,
   },

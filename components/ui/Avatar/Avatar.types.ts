@@ -2,7 +2,7 @@
  * Avatar Component Type Definitions
  */
 
-import { ImageSourcePropType } from 'react-native';
+import { ImageSourcePropType, StyleProp, ViewStyle } from 'react-native';
 import { ReactNode } from 'react';
 
 export type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
@@ -39,6 +39,11 @@ export interface AvatarProps {
    * Accessibility label for screen readers
    */
   accessibilityLabel?: string;
+
+  /**
+   * Additional style overrides for the container
+   */
+  containerStyle?: StyleProp<ViewStyle>;
 
   /**
    * Test ID for automated testing

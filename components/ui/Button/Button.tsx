@@ -69,6 +69,7 @@ export function Button({
   rightIcon,
   accessibilityLabel,
   testID,
+  style,
 }: ButtonProps) {
   const scale = useSharedValue(1);
 
@@ -103,6 +104,7 @@ export function Button({
       style={[
         animatedStyle,
         fullWidth && styles.fullWidth,
+        style,
       ]}
     >
       <TouchableOpacity

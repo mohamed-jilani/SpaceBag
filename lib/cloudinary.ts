@@ -1,5 +1,5 @@
-const CLOUDINARY_URL = 'https://api.cloudinary.com/v1_1/doijbmcry/image/upload';
-const UPLOAD_PRESET = 'spacebag_preset';
+const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`;
+const UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'spacebag_preset';
 
 export const uploadImage = async (uri: string): Promise<string> => {
   const formData = new FormData();

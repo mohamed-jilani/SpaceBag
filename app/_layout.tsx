@@ -1,9 +1,9 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { StripeProvider } from '@stripe/stripe-react-native';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '@/context/AuthContext';
+import { StripeProviderWrapper } from '@/components/StripeProviderWrapper';
 
 // Create a client for React Query
 const queryClient = new QueryClient({
@@ -20,9 +20,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StripeProvider
-        publishableKey={process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_51O7Q1kFp9Kj8y2XQ4Q3W8T8U9V0W1X2Y3Z4A5B6C7D8E9F0G1H2I3J4K5L6M7N8O9P0Q1R2S3T4U5V6W7X8Y9Z0'}
-      >
+      <StripeProviderWrapper>
         <AuthProvider>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
@@ -35,7 +33,7 @@ export default function RootLayout() {
           </Stack>
           <StatusBar style="auto" />
         </AuthProvider>
-      </StripeProvider>
+      </StripeProviderWrapper>
     </QueryClientProvider>
   );
 }

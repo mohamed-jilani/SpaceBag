@@ -3,6 +3,7 @@
  */
 
 import { ReactNode } from 'react';
+import { StyleProp, ViewStyle } from 'react-native';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';
@@ -62,6 +63,11 @@ export interface ButtonProps {
    * Accessibility label for screen readers
    */
   accessibilityLabel?: string;
+
+  /**
+   * Additional style overrides for the outer container
+   */
+  style?: StyleProp<ViewStyle>;
 
   /**
    * Test ID for automated testing
