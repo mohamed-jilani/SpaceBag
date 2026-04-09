@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { Container, Input, Button, Card } from '@/components/ui';
-import { colors, spacing, typography, borderRadius } from '@/constants/design';
+import { spacing, typography, borderRadius } from '@/constants/design';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Ionicons, FontAwesome } from '@expo/vector-icons';
 
 export default function LoginScreen() {
@@ -11,13 +13,15 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   const { signIn } = useAuth();
+  const { colors } = useTheme();
+  const { t } = useLanguage();
   const router = useRouter();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setError(t('auth.fillAllFields'));
       return;
     }
     setLoading(true);
@@ -26,26 +30,26 @@ export default function LoginScreen() {
       await signIn(email, password);
       router.replace('/');
     } catch (err: any) {
-      setError(err.message || 'Failed to login');
+      setError(err.message || t('common.error'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Container style={styles.container}>
+    <Container style={styles.container} backgroundColor={colors.background}>
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.header}>
-          <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.subtitle}>Deliver more, send easier</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('auth.loginTitle')}</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('auth.loginSubtitle')}</Text>
         </View>
 
-        <Card variant="elevated" style={styles.form}>
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          
+        <Card variant="elevated" style={{ ...styles.form, backgroundColor: colors.backgroundSecondary }}>
+          {error ? <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text> : null}
+
           <Input
-            label="Email"
-            placeholder="your@email.com"
+            label={t('auth.email')}
+            placeholder="you@example.com"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -53,43 +57,43 @@ export default function LoginScreen() {
           />
 
           <Input
-            label="Password"
+            label={t('auth.password')}
             placeholder="••••••••"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
           />
 
-          <Button 
-            variant="primary" 
-            onPress={handleLogin} 
+          <Button
+            variant="primary"
+            onPress={handleLogin}
             loading={loading}
             style={styles.submitBtn}
           >
-            Sign In
+            {t('auth.signIn')}
           </Button>
 
           <View style={styles.divider}>
-            <View style={styles.line} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.line} />
+            <View style={[styles.line, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dividerText, { color: colors.textSecondary }]}>{t('common.or')}</Text>
+            <View style={[styles.line, { backgroundColor: colors.border }]} />
           </View>
 
           <View style={styles.socialRow}>
-            <TouchableOpacity style={styles.socialBtn}>
+            <TouchableOpacity style={[styles.socialBtn, { borderColor: colors.border, backgroundColor: colors.backgroundTertiary }]}>
               <Ionicons name="logo-google" size={24} color={colors.text} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.socialBtn}>
+            <TouchableOpacity style={[styles.socialBtn, { borderColor: colors.border, backgroundColor: colors.backgroundTertiary }]}>
               <FontAwesome name="facebook" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
         </Card>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
+          <Text style={[styles.footerText, { color: colors.textSecondary }]}>{t('auth.noAccount')} </Text>
           <Link href="/(auth)/signup" asChild>
             <TouchableOpacity>
-              <Text style={styles.linkText}>Join Now</Text>
+              <Text style={[styles.linkText, { color: colors.primary }]}>{t('auth.joinNow')}</Text>
             </TouchableOpacity>
           </Link>
         </View>
@@ -101,7 +105,6 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   scroll: {
     padding: spacing.lg,
@@ -112,19 +115,15 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h1,
-    color: colors.text,
     marginBottom: spacing.xs,
   },
   subtitle: {
     ...typography.body,
-    color: colors.textSecondary,
   },
   form: {
     padding: spacing.lg,
-    backgroundColor: colors.backgroundSecondary,
   },
   errorText: {
-    color: colors.error,
     marginBottom: spacing.md,
     ...typography.small,
   },
@@ -139,11 +138,9 @@ const styles = StyleSheet.create({
   line: {
     flex: 1,
     height: 1,
-    backgroundColor: colors.borderDarkMode,
   },
   dividerText: {
     ...typography.tiny,
-    color: colors.textSecondary,
     marginHorizontal: spacing.md,
   },
   socialRow: {
@@ -156,10 +153,8 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: borderRadius.full,
     borderWidth: 1,
-    borderColor: colors.borderDarkMode,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.backgroundTertiary,
   },
   footer: {
     flexDirection: 'row',
@@ -169,10 +164,8 @@ const styles = StyleSheet.create({
   },
   footerText: {
     ...typography.body,
-    color: colors.textSecondary,
   },
   linkText: {
     ...typography.bodyBold,
-    color: colors.primary,
   },
 });

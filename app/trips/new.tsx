@@ -113,8 +113,6 @@ export default function NewTripScreen() {
             placeholder="Extra details about your trip"
             value={form.description}
             onChangeText={(v) => setForm(f => ({ ...f, description: v }))}
-            multiline
-            numberOfLines={3}
           />
 
           <Button 

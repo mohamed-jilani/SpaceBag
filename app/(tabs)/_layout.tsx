@@ -1,12 +1,14 @@
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@/constants/design';
 import { useAuth } from '@/context/AuthContext';
-import { Redirect } from 'expo-router';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function TabsLayout() {
   const { user, loading } = useAuth();
+  const { colors } = useTheme();
+  const { t } = useLanguage();
 
   if (loading) return null;
   if (!user) return <Redirect href="/(auth)/login" />;
@@ -26,7 +28,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: t('tabs.home'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" size={size} color={color} />
           ),
@@ -35,7 +37,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="requests"
         options={{
-          title: 'Requests',
+          title: t('tabs.requests'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="paper-plane-outline" size={size} color={color} />
           ),
@@ -44,7 +46,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="messages"
         options={{
-          title: 'Messages',
+          title: t('tabs.messages'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbubbles-outline" size={size} color={color} />
           ),
@@ -53,12 +55,13 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('tabs.profile'),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" size={size} color={color} />
           ),
         }}
       />
+      <Tabs.Screen name="settings" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -7,6 +7,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { StripeProviderWrapper } from '@/components/StripeProviderWrapper';
+import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { LanguageProvider } from '@/contexts/LanguageContext';
 
 // Empêcher le masquage automatique du splash
 SplashScreen.preventAutoHideAsync();
@@ -74,33 +76,44 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function AppStatusBar() {
+  const { isDark } = useTheme();
+  return <StatusBar style={isDark ? 'light' : 'dark'} />;
+}
+
 export default function RootLayout() {
   useFrameworkReady();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <StripeProviderWrapper>
-        <AuthProvider>
-          <NavigationGuard>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
-              <Stack.Screen name="(auth)/signup" options={{ headerShown: false }} />
-              <Stack.Screen name="onboarding/index" options={{ headerShown: false }} />
-              <Stack.Screen name="trips/new" options={{ headerShown: false }} />
-              <Stack.Screen name="trips/[id]" options={{ headerShown: false }} />
-              <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
-              <Stack.Screen name="tracking/[id]" options={{ headerShown: false }} />
-              <Stack.Screen name="kyc/submit" options={{ headerShown: false }} />
-              <Stack.Screen name="admin/kyc" options={{ headerShown: false }} />
-              <Stack.Screen name="legal/cgu" options={{ headerShown: false }} />
-              <Stack.Screen name="+not-found" />
-            </Stack>
-            <StatusBar style="light" />
-          </NavigationGuard>
-        </AuthProvider>
-      </StripeProviderWrapper>
+      <ThemeProvider>
+        <LanguageProvider>
+          <StripeProviderWrapper>
+            <AuthProvider>
+              <NavigationGuard>
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="index" />
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
+                  <Stack.Screen name="(auth)/signup" options={{ headerShown: false }} />
+                  <Stack.Screen name="onboarding/index" options={{ headerShown: false }} />
+                  <Stack.Screen name="trips/new" options={{ headerShown: false }} />
+                  <Stack.Screen name="trips/[id]" options={{ headerShown: false }} />
+                  <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
+                  <Stack.Screen name="tracking/[id]" options={{ headerShown: false }} />
+                  <Stack.Screen name="kyc/submit" options={{ headerShown: false }} />
+                  <Stack.Screen name="admin/kyc" options={{ headerShown: false }} />
+                  <Stack.Screen name="legal/cgu" options={{ headerShown: false }} />
+                  <Stack.Screen name="wallet/index" options={{ headerShown: false }} />
+                  <Stack.Screen name="wallet/add-card" options={{ headerShown: false }} />
+                  <Stack.Screen name="+not-found" />
+                </Stack>
+                <AppStatusBar />
+              </NavigationGuard>
+            </AuthProvider>
+          </StripeProviderWrapper>
+        </LanguageProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

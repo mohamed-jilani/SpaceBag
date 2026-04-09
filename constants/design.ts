@@ -18,10 +18,11 @@
  */
 
 // ============================================================================
-// COLORS
+// COLORS — dark palette (défaut) + light palette
 // ============================================================================
 
-export const colors = {
+/** Palette dark (thème par défaut) */
+export const darkColors = {
   // Brand Colors
   primary: '#22D3EE', // Electric Cyan
   primaryDark: '#0891B2',
@@ -102,6 +103,91 @@ export const colors = {
   black: '#000000',
   transparent: 'transparent',
 };
+
+/** Palette light */
+export const lightColors = {
+  // Brand Colors (inchangées)
+  primary: '#0891B2',
+  primaryDark: '#0369A1',
+  primaryLight: '#22D3EE',
+  primaryTint: '#E0F2FE',
+
+  secondary: '#64748B',
+  secondaryDark: '#475569',
+  secondaryLight: '#94A3B8',
+  secondaryTint: '#F1F5F9',
+
+  accent: '#7C3AED',
+  accentDark: '#6D28D9',
+  accentLight: '#8B5CF6',
+  accentTint: '#EDE9FE',
+
+  // Backgrounds (clairs)
+  background: '#F8FAFC',
+  backgroundSecondary: '#FFFFFF',
+  backgroundTertiary: '#F1F5F9',
+
+  backgroundDark: '#F8FAFC',
+  backgroundDarkSecondary: '#FFFFFF',
+  backgroundDarkTertiary: '#F1F5F9',
+
+  // Textes (foncés)
+  text: '#0F172A',
+  textSecondary: '#475569',
+  textTertiary: '#94A3B8',
+  textDisabled: '#CBD5E1',
+
+  textDark: '#0F172A',
+  textDarkSecondary: '#475569',
+  textDarkTertiary: '#94A3B8',
+
+  // Sémantiques (inchangées)
+  success: '#10B981',
+  successDark: '#059669',
+  successLight: '#34D399',
+  successTint: '#D1FAE5',
+
+  error: '#EF4444',
+  errorDark: '#DC2626',
+  errorLight: '#F87171',
+  errorTint: '#FEE2E2',
+
+  warning: '#F59E0B',
+  warningDark: '#D97706',
+  warningLight: '#FBBF24',
+  warningTint: '#FEF3C7',
+
+  info: '#3B82F6',
+  infoDark: '#2563EB',
+  infoLight: '#60A5FA',
+  infoTint: '#DBEAFE',
+
+  // Bordures
+  border: '#CBD5E1',
+  borderDark: '#94A3B8',
+  borderLight: '#E2E8F0',
+
+  borderDarkMode: '#E2E8F0',
+  borderDarkModeLight: '#F1F5F9',
+
+  // Overlays
+  overlay: 'rgba(0, 0, 0, 0.4)',
+  overlayLight: 'rgba(0, 0, 0, 0.2)',
+  overlayDark: 'rgba(0, 0, 0, 0.6)',
+
+  surface: '#FFFFFF',
+
+  // Spéciaux
+  white: '#FFFFFF',
+  black: '#000000',
+  transparent: 'transparent',
+};
+
+/**
+ * Couleurs par défaut (dark) — compat ascendante avec tous les imports existants.
+ * Les nouveaux composants doivent utiliser `useTheme().colors` pour être réactifs.
+ */
+export const colors = darkColors;
 
 // ============================================================================
 // SPACING

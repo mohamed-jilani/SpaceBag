@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   StyleSheet,
   View,
@@ -14,35 +14,47 @@ import {
   ScrollView,
 } from 'react-native';
 import { Container, Button, Card, Avatar } from '@/components/ui';
-import { colors, spacing, typography, borderRadius } from '@/constants/design';
+import { darkColors, spacing, typography, borderRadius } from '@/constants/design';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { useRequests } from '@/hooks/useRequests';
 import { Ionicons } from '@expo/vector-icons';
-import { Request, RequestStatus, Review } from '@/types';
+import { Request, RequestStatus } from '@/types';
 import { useRouter } from 'expo-router';
 import { createReview, hasUserReviewed } from '@/services/reviews';
+import { payForRequest } from '@/services/wallet';
 import { QRCodeModal } from '@/components/QRCodeModal';
 import { QRScanner } from '@/components/QRScanner';
 
+type Colors = typeof darkColors;
+
 // ─── Badge de statut ──────────────────────────────────────────────────────────
 
-const STATUS_CONFIG: Record<RequestStatus, { label: string; color: string; bg: string }> = {
-  pending:    { label: 'En attente',  color: colors.warning, bg: colors.warningTint  },
-  accepted:   { label: 'Acceptée',    color: colors.success, bg: colors.successTint  },
-  refused:    { label: 'Refusée',     color: colors.error,   bg: colors.errorTint    },
-  paid:       { label: 'Payée',       color: colors.info,    bg: colors.infoTint     },
-  in_transit: { label: 'En transit',  color: colors.primary, bg: colors.primaryTint  },
-  delivered:  { label: 'Livré ✓',    color: colors.success, bg: colors.successTint  },
-};
-
 function StatusBadge({ status }: { status: RequestStatus }) {
-  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending;
+  const { colors } = useTheme();
+  const cfg = getStatusConfig(colors)[status] ?? getStatusConfig(colors).pending;
   return (
-    <View style={[styles.badge, { backgroundColor: cfg.bg }]}>
-      <Text style={[styles.badgeText, { color: cfg.color }]}>{cfg.label}</Text>
+    <View style={[badgeStyles.badge, { backgroundColor: cfg.bg }]}>
+      <Text style={[badgeStyles.text, { color: cfg.color }]}>{cfg.label}</Text>
     </View>
   );
 }
+
+function getStatusConfig(colors: Colors): Record<RequestStatus, { label: string; color: string; bg: string }> {
+  return {
+    pending:    { label: 'En attente',  color: colors.warning, bg: colors.warningTint  },
+    accepted:   { label: 'Acceptée',    color: colors.success, bg: colors.successTint  },
+    refused:    { label: 'Refusée',     color: colors.error,   bg: colors.errorTint    },
+    paid:       { label: 'Payée',       color: colors.info,    bg: colors.infoTint     },
+    in_transit: { label: 'En transit',  color: colors.primary, bg: colors.primaryTint  },
+    delivered:  { label: 'Livré ✓',    color: colors.success, bg: colors.successTint  },
+  };
+}
+
+const badgeStyles = StyleSheet.create({
+  badge: { paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: borderRadius.full },
+  text: { fontSize: 10, fontWeight: '700' },
+});
 
 // ─── Sélecteur d'étoiles ──────────────────────────────────────────────────────
 
@@ -55,6 +67,7 @@ function StarRating({
   onChange?: (v: number) => void;
   size?: number;
 }) {
+  const { colors } = useTheme();
   return (
     <View style={{ flexDirection: 'row', gap: 6 }}>
       {[1, 2, 3, 4, 5].map(star => (
@@ -88,6 +101,7 @@ function ReviewModal({
   onSubmit: (rating: number, comment: string) => Promise<void>;
   targetName: string;
 }) {
+  const { colors } = useTheme();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -104,7 +118,7 @@ function ReviewModal({
       setComment('');
       onClose();
     } catch (err: any) {
-      Alert.alert('Erreur', err.message || 'Impossible d\'envoyer l\'avis.');
+      Alert.alert('Erreur', err.message || "Impossible d'envoyer l'avis.");
     } finally {
       setSubmitting(false);
     }
@@ -113,10 +127,12 @@ function ReviewModal({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={modalStyles.overlay}>
-        <View style={modalStyles.sheet}>
-          <View style={modalStyles.handle} />
-          <Text style={modalStyles.title}>Évaluer {targetName}</Text>
-          <Text style={modalStyles.subtitle}>
+        <View style={[modalStyles.sheet, { backgroundColor: colors.backgroundSecondary }]}>
+          <View style={[modalStyles.handle, { backgroundColor: colors.backgroundTertiary }]} />
+          <Text style={[modalStyles.title, { color: colors.text }]}>
+            Évaluer {targetName}
+          </Text>
+          <Text style={[modalStyles.subtitle, { color: colors.textSecondary }]}>
             Donnez une note à votre expérience avec ce{' '}
             {targetName.toLowerCase().includes('transporteur') ? 'transporteur' : 'membre'}.
           </Text>
@@ -125,13 +141,20 @@ function ReviewModal({
             <StarRating value={rating} onChange={setRating} size={40} />
           </View>
           {rating > 0 && (
-            <Text style={modalStyles.ratingLabel}>
+            <Text style={[modalStyles.ratingLabel, { color: colors.warning }]}>
               {['', '😕 Très mauvais', '😐 Mauvais', '🙂 Correct', '😊 Bien', '🌟 Excellent !'][rating]}
             </Text>
           )}
 
           <TextInput
-            style={modalStyles.commentInput}
+            style={[
+              modalStyles.commentInput,
+              {
+                backgroundColor: colors.backgroundTertiary,
+                color: colors.text,
+                borderColor: colors.border + '40',
+              },
+            ]}
             placeholder="Laisser un commentaire (optionnel)…"
             placeholderTextColor={colors.textTertiary}
             value={comment}
@@ -140,7 +163,9 @@ function ReviewModal({
             numberOfLines={3}
             maxLength={300}
           />
-          <Text style={modalStyles.charCount}>{comment.length}/300</Text>
+          <Text style={[modalStyles.charCount, { color: colors.textTertiary }]}>
+            {comment.length}/300
+          </Text>
 
           <View style={modalStyles.actions}>
             <Button variant="ghost" onPress={onClose} style={modalStyles.flex1}>
@@ -162,13 +187,8 @@ function ReviewModal({
 }
 
 const modalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   sheet: {
-    backgroundColor: colors.backgroundSecondary,
     borderTopLeftRadius: borderRadius.xxl,
     borderTopRightRadius: borderRadius.xxl,
     padding: spacing.xl,
@@ -178,37 +198,23 @@ const modalStyles = StyleSheet.create({
   handle: {
     width: 40,
     height: 4,
-    backgroundColor: colors.backgroundTertiary,
     borderRadius: 2,
     alignSelf: 'center',
     marginBottom: spacing.sm,
   },
-  title: { ...typography.h3, color: colors.text, textAlign: 'center' },
-  subtitle: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
+  title: { ...typography.h3, textAlign: 'center' },
+  subtitle: { ...typography.body, textAlign: 'center', marginBottom: spacing.sm },
   starsRow: { alignItems: 'center' },
-  ratingLabel: {
-    ...typography.bodyBold,
-    color: colors.warning,
-    textAlign: 'center',
-    marginTop: -spacing.sm,
-  },
+  ratingLabel: { ...typography.bodyBold, textAlign: 'center', marginTop: -spacing.sm },
   commentInput: {
-    backgroundColor: colors.backgroundTertiary,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     ...typography.body,
-    color: colors.text,
     minHeight: 80,
     textAlignVertical: 'top',
     borderWidth: 1,
-    borderColor: colors.border + '40',
   },
-  charCount: { ...typography.tiny, color: colors.textTertiary, textAlign: 'right', marginTop: -spacing.sm },
+  charCount: { ...typography.tiny, textAlign: 'right', marginTop: -spacing.sm },
   actions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm },
   flex1: { flex: 1 },
 });
@@ -216,35 +222,30 @@ const modalStyles = StyleSheet.create({
 // ─── Écran principal ──────────────────────────────────────────────────────────
 
 export default function RequestsScreen() {
+  const { colors } = useTheme();
   const { user, profile } = useAuth();
   const { requests, loading, error, updateRequestStatus, generateCode } = useRequests();
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [codeInputs, setCodeInputs] = useState<Record<string, string>>({});
-  // QR Code modal (transporteur — affiche le QR code généré)
   const [qrModal, setQrModal] = useState<{ visible: boolean; code: string } | null>(null);
-  // QR Scanner (membre — scanne le QR code)
   const [qrScannerRequest, setQrScannerRequest] = useState<Request | null>(null);
-  // État du modal d'évaluation
   const [reviewModal, setReviewModal] = useState<{
     visible: boolean;
     requestId: string;
     toUserId: string;
     targetName: string;
   } | null>(null);
-  // Cache des évaluations déjà soumises (pour masquer le bouton)
   const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
   const router = useRouter();
 
   const isCarrier = profile?.role === 'carrier';
+  const s = useMemo(() => buildStyles(colors), [colors]);
 
-  // ── Ouvrir le modal d'évaluation ───────────────────────────────────────────
+  // ── Modal d'évaluation ────────────────────────────────────────────────────
   const openReviewModal = useCallback(
     async (request: Request & { trip?: any }) => {
       const toUserId = isCarrier ? request.memberId : request.carrierId;
-      const targetName = isCarrier
-        ? (request.memberDisplayName || 'Membre')
-        : 'Transporteur';
-
+      const targetName = isCarrier ? (request.memberDisplayName || 'Membre') : 'Transporteur';
       try {
         const already = await hasUserReviewed(request.id, user!.uid);
         if (already) {
@@ -275,28 +276,54 @@ export default function RequestsScreen() {
     [reviewModal, user]
   );
 
+  // ── Paiement portefeuille ─────────────────────────────────────────────────
+  const handleWalletPay = useCallback(
+    (request: Request & { trip?: any }) => {
+      const amount = request.price ?? (request.trip?.pricePerKg ?? 10) * (request.weight ?? 1);
+      Alert.alert(
+        '💳 Payer via portefeuille',
+        `Payer €${amount.toFixed(2)} au transporteur ?`,
+        [
+          { text: 'Annuler', style: 'cancel' },
+          {
+            text: 'Confirmer',
+            onPress: async () => {
+              try {
+                setLoadingId(request.id);
+                await payForRequest(
+                  user!.uid,
+                  request.carrierId,
+                  amount,
+                  request.id,
+                  `Livraison ${request.trip?.departure ?? ''} → ${request.trip?.arrival ?? ''}`
+                );
+                await updateRequestStatus({ id: request.id, status: 'paid' });
+                Alert.alert('✅ Paiement effectué', 'Le transporteur a été crédité.');
+              } catch (err: any) {
+                Alert.alert('Erreur', err.message || 'Paiement impossible.');
+              } finally {
+                setLoadingId(null);
+              }
+            },
+          },
+        ]
+      );
+    },
+    [user, updateRequestStatus]
+  );
+
   // ── Mise à jour du statut ──────────────────────────────────────────────────
   const handleStatusUpdate = useCallback(
     async (request: Request, status: RequestStatus | 'generate_code') => {
       try {
         setLoadingId(request.id);
-
         if (status === 'generate_code') {
           const code = generateCode();
-          await updateRequestStatus({
-            id: request.id,
-            status: 'in_transit',
-            verificationCode: code,
-          });
-          Alert.alert(
-            '🔑 Code généré !',
-            `Code de livraison : ${code}\n\nCe code est visible par le membre. Donnez-le lui lors de la remise physique.`
-          );
+          await updateRequestStatus({ id: request.id, status: 'in_transit', verificationCode: code });
+          Alert.alert('🔑 Code généré !', `Code de livraison : ${code}\n\nCommuniquez-le au membre lors de la remise.`);
           return;
         }
-
         await updateRequestStatus({ id: request.id, status: status as RequestStatus });
-
         if (status === 'accepted') {
           Alert.alert('✅ Demande acceptée', 'Une conversation a été créée avec le membre.');
         } else if (status === 'refused') {
@@ -313,7 +340,7 @@ export default function RequestsScreen() {
     [updateRequestStatus, generateCode]
   );
 
-  // ── Validation du code par le membre ──────────────────────────────────────
+  // ── Validation du code ────────────────────────────────────────────────────
   const handleMemberValidateDelivery = useCallback(
     async (request: Request) => {
       const inputCode = (codeInputs[request.id] || '').trim();
@@ -349,7 +376,7 @@ export default function RequestsScreen() {
   const handleOpenChat = useCallback(
     (request: Request) => {
       if (!request.chatId) {
-        Alert.alert('Chat indisponible', 'La conversation n\'est pas encore créée.');
+        Alert.alert('Chat indisponible', "La conversation n'est pas encore créée.");
         return;
       }
       router.push(`/chat/${request.chatId}`);
@@ -365,22 +392,22 @@ export default function RequestsScreen() {
       const canReview = isDelivered && !reviewedIds.has(item.id);
 
       return (
-        <Card variant="elevated" style={styles.card}>
-          {/* En-tête trajet + statut */}
-          <View style={styles.cardHeader}>
-            <View style={styles.routeInfo}>
+        <Card variant="elevated" style={s.card}>
+          {/* En-tête */}
+          <View style={s.cardHeader}>
+            <View style={s.routeInfo}>
               {item.trip ? (
-                <View style={styles.routeRow}>
+                <View style={s.routeRow}>
                   <Ionicons name="location-outline" size={14} color={colors.primary} />
-                  <Text style={styles.routeText} numberOfLines={1}>{item.trip.departure}</Text>
+                  <Text style={s.routeText} numberOfLines={1}>{item.trip.departure}</Text>
                   <Ionicons name="arrow-forward" size={12} color={colors.textTertiary} />
                   <Ionicons name="location-sharp" size={14} color={colors.primary} />
-                  <Text style={styles.routeText} numberOfLines={1}>{item.trip.arrival}</Text>
+                  <Text style={s.routeText} numberOfLines={1}>{item.trip.arrival}</Text>
                 </View>
               ) : (
-                <Text style={styles.routeText}>Trajet inconnu</Text>
+                <Text style={s.routeText}>Trajet inconnu</Text>
               )}
-              <Text style={styles.dateText}>
+              <Text style={s.dateText}>
                 {new Date(item.createdAt).toLocaleDateString('fr-FR', {
                   day: 'numeric', month: 'short', year: 'numeric',
                 })}
@@ -390,50 +417,49 @@ export default function RequestsScreen() {
           </View>
 
           {/* Infos colis */}
-          <View style={styles.parcelRow}>
+          <View style={s.parcelRow}>
             {item.photoUrl ? (
-              <Image source={{ uri: item.photoUrl }} style={styles.parcelPhoto} />
+              <Image source={{ uri: item.photoUrl }} style={s.parcelPhoto} />
             ) : (
-              <View style={[styles.parcelPhoto, styles.parcelPhotoPlaceholder]}>
+              <View style={[s.parcelPhoto, s.parcelPhotoPlaceholder]}>
                 <Ionicons name="cube-outline" size={24} color={colors.textTertiary} />
               </View>
             )}
-            <View style={styles.parcelInfo}>
+            <View style={s.parcelInfo}>
               {isCarrier && item.memberDisplayName && (
-                <View style={styles.memberRow}>
+                <View style={s.memberRow}>
                   <Avatar name={item.memberDisplayName} size="xs" />
-                  <Text style={styles.memberName}>{item.memberDisplayName}</Text>
+                  <Text style={s.memberName}>{item.memberDisplayName}</Text>
                 </View>
               )}
               {item.description ? (
-                <Text style={styles.parcelDesc} numberOfLines={2}>{item.description}</Text>
+                <Text style={s.parcelDesc} numberOfLines={2}>{item.description}</Text>
               ) : null}
-              <View style={styles.specsRow}>
-                <View style={styles.specItem}>
+              <View style={s.specsRow}>
+                <View style={s.specItem}>
                   <Ionicons name="scale-outline" size={13} color={colors.textSecondary} />
-                  <Text style={styles.specText}>{item.weight} kg</Text>
+                  <Text style={s.specText}>{item.weight} kg</Text>
                 </View>
                 {item.dimensions ? (
-                  <View style={styles.specItem}>
+                  <View style={s.specItem}>
                     <Ionicons name="cube-outline" size={13} color={colors.textSecondary} />
-                    <Text style={styles.specText}>{item.dimensions}</Text>
+                    <Text style={s.specText}>{item.dimensions}</Text>
                   </View>
                 ) : null}
               </View>
             </View>
           </View>
 
-          {/* Zone code livraison (in_transit avec code) */}
+          {/* Zone code livraison */}
           {item.status === 'in_transit' && item.verificationCode && (
-            <View style={styles.codeSection}>
+            <View style={s.codeSection}>
               {isCarrier ? (
-                // Transporteur : voit le code + bouton QR
-                <View style={styles.carrierCodeBox}>
-                  <View style={styles.codeHeaderRow}>
+                <View style={s.carrierCodeBox}>
+                  <View style={s.codeHeaderRow}>
                     <Ionicons name="key" size={16} color={colors.primary} />
-                    <Text style={styles.codeTitle}>Code de livraison généré</Text>
+                    <Text style={s.codeTitle}>Code de livraison généré</Text>
                   </View>
-                  <Text style={styles.codeValue}>{item.verificationCode}</Text>
+                  <Text style={s.codeValue}>{item.verificationCode}</Text>
                   <Button
                     variant="outline"
                     size="sm"
@@ -443,16 +469,15 @@ export default function RequestsScreen() {
                     <Ionicons name="qr-code-outline" size={15} color={colors.primary} />
                     {'  '}Afficher QR code
                   </Button>
-                  <Text style={styles.codeHint}>
+                  <Text style={s.codeHint}>
                     Montrez le QR code ou communiquez le code manuellement.
                   </Text>
                 </View>
               ) : (
-                // Membre : scan QR ou saisie manuelle
-                <View style={styles.memberCodeBox}>
-                  <View style={styles.codeHeaderRow}>
+                <View style={s.memberCodeBox}>
+                  <View style={s.codeHeaderRow}>
                     <Ionicons name="checkmark-circle-outline" size={16} color={colors.success} />
-                    <Text style={[styles.codeTitle, { color: colors.success }]}>
+                    <Text style={[s.codeTitle, { color: colors.success }]}>
                       Votre colis est prêt !
                     </Text>
                   </View>
@@ -465,12 +490,12 @@ export default function RequestsScreen() {
                     <Ionicons name="scan-outline" size={15} color={colors.black} />
                     {'  '}Scanner le QR code
                   </Button>
-                  <Text style={[styles.codeHint, { marginTop: spacing.xs }]}>
+                  <Text style={[s.codeHint, { marginTop: spacing.xs }]}>
                     Ou entrez le code manuellement :
                   </Text>
-                  <View style={styles.codeInputRow}>
+                  <View style={s.codeInputRow}>
                     <TextInput
-                      style={styles.codeInput}
+                      style={s.codeInput}
                       placeholder="_ _ _ _ _ _"
                       placeholderTextColor={colors.textTertiary}
                       value={codeInputs[item.id] || ''}
@@ -485,7 +510,7 @@ export default function RequestsScreen() {
                       size="sm"
                       onPress={() => handleMemberValidateDelivery(item)}
                       loading={isLoading}
-                      style={styles.validateBtn}
+                      style={s.validateBtn}
                     >
                       Valider
                     </Button>
@@ -495,55 +520,53 @@ export default function RequestsScreen() {
             </View>
           )}
 
-          {/* Info "prêt à générer le code" */}
+          {/* Info "prêt à générer" */}
           {item.status === 'in_transit' && !item.verificationCode && isCarrier && (
-            <View style={styles.infoBox}>
+            <View style={s.infoBox}>
               <Ionicons name="information-circle-outline" size={15} color={colors.info} />
-              <Text style={styles.infoText}>
+              <Text style={s.infoText}>
                 Générez le code quand vous êtes prêt à remettre le colis.
               </Text>
             </View>
           )}
 
-          {/* Section évaluation (livraison terminée) */}
+          {/* Livraison terminée + évaluation */}
           {isDelivered && (
-            <View style={styles.deliveredSection}>
-              <View style={styles.deliveredHeader}>
+            <View style={s.deliveredSection}>
+              <View style={s.deliveredHeader}>
                 <Ionicons name="checkmark-done-circle" size={20} color={colors.success} />
-                <Text style={styles.deliveredText}>Livraison terminée avec succès</Text>
+                <Text style={s.deliveredText}>Livraison terminée avec succès</Text>
               </View>
               {canReview && (
                 <Button
                   variant="outline"
                   size="sm"
                   onPress={() => openReviewModal(item)}
-                  style={styles.reviewBtn}
+                  style={s.reviewBtn}
                 >
                   ⭐ Évaluer {isCarrier ? 'le membre' : 'le transporteur'}
                 </Button>
               )}
               {!canReview && reviewedIds.has(item.id) && (
-                <Text style={styles.reviewedText}>✓ Évaluation envoyée</Text>
+                <Text style={s.reviewedText}>✓ Évaluation envoyée</Text>
               )}
             </View>
           )}
 
           {/* Barre d'actions */}
-          <View style={styles.actions}>
-            {/* Bouton Chat */}
+          <View style={s.actions}>
             {item.chatId && item.status !== 'refused' && (
               <Button
                 variant="ghost"
                 size="sm"
                 onPress={() => handleOpenChat(item)}
-                style={styles.chatBtn}
+                style={s.chatBtn}
               >
                 <Ionicons name="chatbubbles-outline" size={16} color={colors.primary} />
-                <Text style={styles.chatBtnText}> Chat</Text>
+                <Text style={s.chatBtnText}> Chat</Text>
               </Button>
             )}
 
-            {/* TRANSPORTEUR — demande en attente */}
             {isCarrier && item.status === 'pending' && (
               <>
                 <Button
@@ -551,7 +574,7 @@ export default function RequestsScreen() {
                   size="sm"
                   onPress={() => handleStatusUpdate(item, 'refused')}
                   loading={isLoading}
-                  style={styles.flex1}
+                  style={s.flex1}
                 >
                   Refuser
                 </Button>
@@ -560,61 +583,59 @@ export default function RequestsScreen() {
                   size="sm"
                   onPress={() => handleStatusUpdate(item, 'accepted')}
                   loading={isLoading}
-                  style={styles.flex1}
+                  style={s.flex1}
                 >
                   Accepter
                 </Button>
               </>
             )}
 
-            {/* MEMBRE — acceptée → payer */}
             {!isCarrier && item.status === 'accepted' && (
               <Button
                 variant="primary"
                 size="sm"
-                onPress={() => handleStatusUpdate(item, 'paid')}
+                onPress={() => handleWalletPay(item)}
                 loading={isLoading}
-                style={styles.flex1}
+                style={s.flex1}
               >
-                💳 Payer (simulation)
+                💳 Payer via portefeuille
               </Button>
             )}
 
-            {/* TRANSPORTEUR — payée → colis récupéré */}
             {isCarrier && item.status === 'paid' && (
               <Button
                 variant="primary"
                 size="sm"
                 onPress={() => handleStatusUpdate(item, 'in_transit')}
                 loading={isLoading}
-                style={styles.flex1}
+                style={s.flex1}
               >
                 📦 Colis récupéré
               </Button>
             )}
 
-            {/* TRANSPORTEUR — en transit, pas encore de code */}
             {isCarrier && item.status === 'in_transit' && !item.verificationCode && (
               <Button
                 variant="primary"
                 size="sm"
                 onPress={() => handleStatusUpdate(item, 'generate_code')}
                 loading={isLoading}
-                style={styles.flex1}
+                style={s.flex1}
               >
                 🔑 Générer code livraison
               </Button>
             )}
 
-            {/* SUIVI — visible pour les 2 parties en transit */}
             {item.status === 'in_transit' && item.trip && (
               <Button
                 variant="ghost"
                 size="sm"
-                onPress={() => router.push(
-                  `/tracking/${item.id}?departure=${encodeURIComponent(item.trip!.departure)}&arrival=${encodeURIComponent(item.trip!.arrival)}`
-                )}
-                style={styles.flex1}
+                onPress={() =>
+                  router.push(
+                    `/tracking/${item.id}?departure=${encodeURIComponent(item.trip!.departure)}&arrival=${encodeURIComponent(item.trip!.arrival)}`
+                  )
+                }
+                style={s.flex1}
               >
                 📍 Suivi du colis
               </Button>
@@ -628,7 +649,10 @@ export default function RequestsScreen() {
       isCarrier,
       codeInputs,
       reviewedIds,
+      colors,
+      s,
       handleStatusUpdate,
+      handleWalletPay,
       handleMemberValidateDelivery,
       handleOpenChat,
       openReviewModal,
@@ -637,43 +661,47 @@ export default function RequestsScreen() {
 
   // ── Rendu principal ────────────────────────────────────────────────────────
   return (
-    <Container style={styles.container}>
-      <View style={styles.header}>
+    <Container backgroundColor={colors.background} style={s.container}>
+      <View style={s.header}>
         <View>
-          <Text style={styles.title}>
+          <Text style={s.title}>
             {isCarrier ? 'Demandes reçues' : 'Mes demandes'}
           </Text>
           {!loading && requests.length > 0 && (
-            <Text style={styles.subtitle}>{requests.length} demande{requests.length > 1 ? 's' : ''}</Text>
+            <Text style={s.subtitle}>
+              {requests.length} demande{requests.length > 1 ? 's' : ''}
+            </Text>
           )}
         </View>
       </View>
 
       {loading ? (
-        <View style={styles.loadingContainer}>
+        <View style={s.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Chargement en temps réel…</Text>
+          <Text style={s.loadingText}>Chargement en temps réel…</Text>
         </View>
       ) : error ? (
-        <View style={styles.loadingContainer}>
+        <View style={s.loadingContainer}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.error} />
-          <Text style={{ ...typography.body, color: colors.error, textAlign: 'center' }}>{error}</Text>
+          <Text style={{ ...typography.body, color: colors.error, textAlign: 'center' }}>
+            {error}
+          </Text>
         </View>
       ) : (
         <FlatList
           data={requests}
           keyExtractor={item => item.id}
           renderItem={renderRequest}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={s.list}
           ListEmptyComponent={
-            <View style={styles.empty}>
+            <View style={s.empty}>
               <Ionicons name="paper-plane-outline" size={56} color={colors.textTertiary} />
-              <Text style={styles.emptyTitle}>
+              <Text style={s.emptyTitle}>
                 {isCarrier ? 'Aucune demande pour le moment' : 'Aucune demande en cours'}
               </Text>
-              <Text style={styles.emptySubtitle}>
+              <Text style={s.emptySubtitle}>
                 {isCarrier
-                  ? 'Les demandes apparaîtront ici en temps réel dès qu\'un membre souhaite envoyer un colis.'
+                  ? "Les demandes apparaîtront ici en temps réel dès qu'un membre souhaite envoyer un colis."
                   : 'Trouvez un trajet et faites votre première demande !'}
               </Text>
               {!isCarrier && (
@@ -691,7 +719,6 @@ export default function RequestsScreen() {
         />
       )}
 
-      {/* Modal d'évaluation */}
       {reviewModal && (
         <ReviewModal
           visible={reviewModal.visible}
@@ -701,7 +728,6 @@ export default function RequestsScreen() {
         />
       )}
 
-      {/* QR Code modal (transporteur) */}
       {qrModal && (
         <QRCodeModal
           visible={qrModal.visible}
@@ -710,18 +736,19 @@ export default function RequestsScreen() {
         />
       )}
 
-      {/* QR Scanner (membre) */}
       {qrScannerRequest && (
         <QRScanner
           visible={!!qrScannerRequest}
-          onScanned={(scannedCode) => {
+          onScanned={scannedCode => {
             setCodeInputs(prev => ({ ...prev, [qrScannerRequest.id]: scannedCode }));
             setQrScannerRequest(null);
-            // Valider automatiquement après scan
             if (scannedCode === qrScannerRequest.verificationCode) {
               handleMemberValidateDelivery({ ...qrScannerRequest });
             } else {
-              Alert.alert('Code incorrect', 'Le code scanné ne correspond pas. Vérifiez auprès du transporteur.');
+              Alert.alert(
+                'Code incorrect',
+                'Le code scanné ne correspond pas. Vérifiez auprès du transporteur.'
+              );
             }
           }}
           onClose={() => setQrScannerRequest(null)}
@@ -731,164 +758,133 @@ export default function RequestsScreen() {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─── buildStyles ──────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.md,
-  },
-  title: { ...typography.h1, color: colors.text },
-  subtitle: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  loadingText: { ...typography.body, color: colors.textSecondary },
-  list: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl,
-    gap: spacing.md,
-  },
+function buildStyles(colors: Colors) {
+  return StyleSheet.create({
+    container: { flex: 1 },
+    header: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.xl,
+      paddingBottom: spacing.md,
+    },
+    title: { ...typography.h1, color: colors.text },
+    subtitle: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
+    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.md },
+    loadingText: { ...typography.body, color: colors.textSecondary },
+    list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
 
-  // Carte
-  card: {
-    padding: spacing.md,
-    backgroundColor: colors.backgroundSecondary,
-    gap: spacing.md,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  routeInfo: { flex: 1, marginRight: spacing.sm, gap: 4 },
-  routeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    flexWrap: 'wrap',
-  },
-  routeText: { ...typography.captionBold, color: colors.text, flexShrink: 1 },
-  dateText: { ...typography.tiny, color: colors.textTertiary },
+    card: {
+      padding: spacing.md,
+      backgroundColor: colors.backgroundSecondary,
+      gap: spacing.md,
+    },
+    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    routeInfo: { flex: 1, marginRight: spacing.sm, gap: 4 },
+    routeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' },
+    routeText: { ...typography.captionBold, color: colors.text, flexShrink: 1 },
+    dateText: { ...typography.tiny, color: colors.textTertiary },
 
-  // Badge
-  badge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: borderRadius.full,
-  },
-  badgeText: { fontSize: 10, fontWeight: '700' },
+    parcelRow: { flexDirection: 'row', gap: spacing.md },
+    parcelPhoto: {
+      width: 64,
+      height: 64,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.backgroundTertiary,
+    },
+    parcelPhotoPlaceholder: { justifyContent: 'center', alignItems: 'center' },
+    parcelInfo: { flex: 1, gap: 6 },
+    memberRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+    memberName: { ...typography.captionBold, color: colors.text },
+    parcelDesc: { ...typography.caption, color: colors.textSecondary },
+    specsRow: { flexDirection: 'row', gap: spacing.md },
+    specItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    specText: { ...typography.tiny, color: colors.textSecondary },
 
-  // Colis
-  parcelRow: { flexDirection: 'row', gap: spacing.md },
-  parcelPhoto: {
-    width: 64,
-    height: 64,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.backgroundTertiary,
-  },
-  parcelPhotoPlaceholder: { justifyContent: 'center', alignItems: 'center' },
-  parcelInfo: { flex: 1, gap: 6 },
-  memberRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  memberName: { ...typography.captionBold, color: colors.text },
-  parcelDesc: { ...typography.caption, color: colors.textSecondary },
-  specsRow: { flexDirection: 'row', gap: spacing.md },
-  specItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  specText: { ...typography.tiny, color: colors.textSecondary },
+    codeSection: {
+      borderRadius: borderRadius.md,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    carrierCodeBox: {
+      backgroundColor: colors.backgroundTertiary,
+      padding: spacing.md,
+      gap: spacing.sm,
+    },
+    memberCodeBox: {
+      backgroundColor: colors.successTint,
+      padding: spacing.md,
+      gap: spacing.sm,
+    },
+    codeHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+    codeTitle: { ...typography.captionBold, color: colors.primary },
+    codeValue: {
+      ...typography.h2,
+      color: colors.primary,
+      letterSpacing: 8,
+      textAlign: 'center',
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.background,
+      borderRadius: borderRadius.sm,
+    },
+    codeHint: { ...typography.tiny, color: colors.textSecondary, textAlign: 'center' },
+    codeInputRow: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      alignItems: 'center',
+      marginTop: spacing.xs,
+    },
+    codeInput: {
+      flex: 1,
+      height: 44,
+      backgroundColor: colors.backgroundSecondary,
+      borderRadius: borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: spacing.md,
+      color: colors.text,
+      ...typography.h4,
+      textAlign: 'center',
+      letterSpacing: 4,
+    },
+    validateBtn: { flexShrink: 0 },
 
-  // Zone code
-  codeSection: {
-    borderRadius: borderRadius.md,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  carrierCodeBox: {
-    backgroundColor: colors.backgroundTertiary,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  memberCodeBox: {
-    backgroundColor: colors.successTint,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  codeHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  codeTitle: { ...typography.captionBold, color: colors.primary },
-  codeValue: {
-    ...typography.h2,
-    color: colors.primary,
-    letterSpacing: 8,
-    textAlign: 'center',
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.sm,
-  },
-  codeHint: { ...typography.tiny, color: colors.textSecondary, textAlign: 'center' },
-  codeInputRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    alignItems: 'center',
-    marginTop: spacing.xs,
-  },
-  codeInput: {
-    flex: 1,
-    height: 44,
-    backgroundColor: colors.white,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    color: colors.text,
-    ...typography.h4,
-    textAlign: 'center',
-    letterSpacing: 4,
-  },
-  validateBtn: { flexShrink: 0 },
+    infoBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      backgroundColor: colors.infoTint,
+      borderRadius: borderRadius.sm,
+      padding: spacing.sm,
+    },
+    infoText: { ...typography.tiny, color: colors.info, flex: 1 },
 
-  // Info box
-  infoBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.infoTint,
-    borderRadius: borderRadius.sm,
-    padding: spacing.sm,
-  },
-  infoText: { ...typography.tiny, color: colors.info, flex: 1 },
+    deliveredSection: {
+      backgroundColor: colors.successTint,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      gap: spacing.sm,
+    },
+    deliveredHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+    deliveredText: { ...typography.captionBold, color: colors.success },
+    reviewBtn: { borderColor: colors.warning, borderWidth: 1 },
+    reviewedText: { ...typography.caption, color: colors.success, textAlign: 'center' },
 
-  // Évaluation
-  deliveredSection: {
-    backgroundColor: colors.successTint,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  deliveredHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  deliveredText: { ...typography.captionBold, color: colors.success },
-  reviewBtn: { borderColor: colors.warning, borderWidth: 1 },
-  reviewedText: { ...typography.caption, color: colors.success, textAlign: 'center' },
+    actions: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      paddingTop: spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: colors.backgroundTertiary,
+      flexWrap: 'wrap',
+    },
+    flex1: { flex: 1 },
+    chatBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md },
+    chatBtnText: { ...typography.captionBold, color: colors.primary },
 
-  // Actions
-  actions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.backgroundTertiary,
-    flexWrap: 'wrap',
-  },
-  flex1: { flex: 1 },
-  chatBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md },
-  chatBtnText: { ...typography.captionBold, color: colors.primary },
-
-  // Empty
-  empty: { padding: spacing.xxl, alignItems: 'center', gap: spacing.md },
-  emptyTitle: { ...typography.h4, color: colors.text, textAlign: 'center' },
-  emptySubtitle: { ...typography.body, color: colors.textSecondary, textAlign: 'center' },
-});
+    empty: { padding: spacing.xxl, alignItems: 'center', gap: spacing.md },
+    emptyTitle: { ...typography.h4, color: colors.text, textAlign: 'center' },
+    emptySubtitle: { ...typography.body, color: colors.textSecondary, textAlign: 'center' },
+  });
+}
