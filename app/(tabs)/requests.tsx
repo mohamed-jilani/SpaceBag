@@ -21,6 +21,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Request, RequestStatus, Review } from '@/types';
 import { useRouter } from 'expo-router';
 import { createReview, hasUserReviewed } from '@/services/reviews';
+import { QRCodeModal } from '@/components/QRCodeModal';
+import { QRScanner } from '@/components/QRScanner';
 
 // ─── Badge de statut ──────────────────────────────────────────────────────────
 
@@ -218,6 +220,10 @@ export default function RequestsScreen() {
   const { requests, loading, error, updateRequestStatus, generateCode } = useRequests();
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [codeInputs, setCodeInputs] = useState<Record<string, string>>({});
+  // QR Code modal (transporteur — affiche le QR code généré)
+  const [qrModal, setQrModal] = useState<{ visible: boolean; code: string } | null>(null);
+  // QR Scanner (membre — scanne le QR code)
+  const [qrScannerRequest, setQrScannerRequest] = useState<Request | null>(null);
   // État du modal d'évaluation
   const [reviewModal, setReviewModal] = useState<{
     visible: boolean;
@@ -421,19 +427,28 @@ export default function RequestsScreen() {
           {item.status === 'in_transit' && item.verificationCode && (
             <View style={styles.codeSection}>
               {isCarrier ? (
-                // Transporteur : voit le code qu'il a généré
+                // Transporteur : voit le code + bouton QR
                 <View style={styles.carrierCodeBox}>
                   <View style={styles.codeHeaderRow}>
                     <Ionicons name="key" size={16} color={colors.primary} />
                     <Text style={styles.codeTitle}>Code de livraison généré</Text>
                   </View>
                   <Text style={styles.codeValue}>{item.verificationCode}</Text>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onPress={() => setQrModal({ visible: true, code: item.verificationCode! })}
+                    style={{ marginTop: spacing.xs }}
+                  >
+                    <Ionicons name="qr-code-outline" size={15} color={colors.primary} />
+                    {'  '}Afficher QR code
+                  </Button>
                   <Text style={styles.codeHint}>
-                    Communiquez ce code au membre lors de la remise physique.
+                    Montrez le QR code ou communiquez le code manuellement.
                   </Text>
                 </View>
               ) : (
-                // Membre : entre le code pour confirmer
+                // Membre : scan QR ou saisie manuelle
                 <View style={styles.memberCodeBox}>
                   <View style={styles.codeHeaderRow}>
                     <Ionicons name="checkmark-circle-outline" size={16} color={colors.success} />
@@ -441,8 +456,17 @@ export default function RequestsScreen() {
                       Votre colis est prêt !
                     </Text>
                   </View>
-                  <Text style={styles.codeHint}>
-                    Entrez le code que le transporteur vous communiquera lors de la remise.
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onPress={() => setQrScannerRequest(item)}
+                    style={{ marginTop: spacing.xs }}
+                  >
+                    <Ionicons name="scan-outline" size={15} color={colors.black} />
+                    {'  '}Scanner le QR code
+                  </Button>
+                  <Text style={[styles.codeHint, { marginTop: spacing.xs }]}>
+                    Ou entrez le code manuellement :
                   </Text>
                   <View style={styles.codeInputRow}>
                     <TextInput
@@ -457,7 +481,7 @@ export default function RequestsScreen() {
                       maxLength={6}
                     />
                     <Button
-                      variant="primary"
+                      variant="outline"
                       size="sm"
                       onPress={() => handleMemberValidateDelivery(item)}
                       loading={isLoading}
@@ -581,6 +605,20 @@ export default function RequestsScreen() {
                 🔑 Générer code livraison
               </Button>
             )}
+
+            {/* SUIVI — visible pour les 2 parties en transit */}
+            {item.status === 'in_transit' && item.trip && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onPress={() => router.push(
+                  `/tracking/${item.id}?departure=${encodeURIComponent(item.trip!.departure)}&arrival=${encodeURIComponent(item.trip!.arrival)}`
+                )}
+                style={styles.flex1}
+              >
+                📍 Suivi du colis
+              </Button>
+            )}
           </View>
         </Card>
       );
@@ -660,6 +698,33 @@ export default function RequestsScreen() {
           onClose={() => setReviewModal(null)}
           onSubmit={handleReviewSubmit}
           targetName={reviewModal.targetName}
+        />
+      )}
+
+      {/* QR Code modal (transporteur) */}
+      {qrModal && (
+        <QRCodeModal
+          visible={qrModal.visible}
+          code={qrModal.code}
+          onClose={() => setQrModal(null)}
+        />
+      )}
+
+      {/* QR Scanner (membre) */}
+      {qrScannerRequest && (
+        <QRScanner
+          visible={!!qrScannerRequest}
+          onScanned={(scannedCode) => {
+            setCodeInputs(prev => ({ ...prev, [qrScannerRequest.id]: scannedCode }));
+            setQrScannerRequest(null);
+            // Valider automatiquement après scan
+            if (scannedCode === qrScannerRequest.verificationCode) {
+              handleMemberValidateDelivery({ ...qrScannerRequest });
+            } else {
+              Alert.alert('Code incorrect', 'Le code scanné ne correspond pas. Vérifiez auprès du transporteur.');
+            }
+          }}
+          onClose={() => setQrScannerRequest(null)}
         />
       )}
     </Container>

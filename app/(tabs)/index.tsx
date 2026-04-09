@@ -19,13 +19,7 @@ import { Trip } from '@/types';
 
 // ─── Chip de filtre actif ─────────────────────────────────────────────────────
 
-function FilterChip({
-  label,
-  onRemove,
-}: {
-  label: string;
-  onRemove: () => void;
-}) {
+function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
     <TouchableOpacity style={chipStyles.chip} onPress={onRemove}>
       <Text style={chipStyles.label}>{label}</Text>
@@ -46,11 +40,7 @@ const chipStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.primary + '40',
   },
-  label: {
-    ...typography.tiny,
-    color: colors.primary,
-    fontWeight: '600',
-  },
+  label: { ...typography.tiny, color: colors.primary, fontWeight: '600' },
 });
 
 // ─── Carte de trajet ──────────────────────────────────────────────────────────
@@ -65,7 +55,6 @@ function TripCard({ item, onPress }: { item: Trip; onPress: () => void }) {
 
   return (
     <Card variant="elevated" style={styles.tripCard} onPress={onPress}>
-      {/* Route */}
       <View style={styles.routeRow}>
         <View style={styles.cityCol}>
           <Ionicons name="location-outline" size={14} color={colors.primary} />
@@ -82,7 +71,6 @@ function TripCard({ item, onPress }: { item: Trip; onPress: () => void }) {
         </View>
       </View>
 
-      {/* Détails */}
       <View style={styles.detailsRow}>
         <View style={styles.detailItem}>
           <Ionicons name="calendar-outline" size={13} color={colors.textSecondary} />
@@ -98,7 +86,6 @@ function TripCard({ item, onPress }: { item: Trip; onPress: () => void }) {
         </View>
       </View>
 
-      {/* Capacité restante */}
       {item.remainingWeight !== undefined && (
         <View style={styles.capacityRow}>
           <View style={styles.capacityTrack}>
@@ -118,12 +105,7 @@ function TripCard({ item, onPress }: { item: Trip; onPress: () => void }) {
         </View>
       )}
 
-      <Button
-        variant="outline"
-        size="sm"
-        style={{ width: '100%' }}
-        onPress={onPress}
-      >
+      <Button variant="outline" size="sm" style={{ width: '100%' }} onPress={onPress}>
         Voir le trajet
       </Button>
     </Card>
@@ -184,9 +166,7 @@ function FilterPanel({
             placeholderTextColor={colors.textTertiary}
             keyboardType="numeric"
             value={filters.maxPrice !== undefined ? String(filters.maxPrice) : ''}
-            onChangeText={v =>
-              onChange({ maxPrice: v ? parseFloat(v) : undefined })
-            }
+            onChangeText={v => onChange({ maxPrice: v ? parseFloat(v) : undefined })}
           />
         </View>
       </View>
@@ -199,9 +179,7 @@ function FilterPanel({
             placeholderTextColor={colors.textTertiary}
             keyboardType="numeric"
             value={filters.minWeight !== undefined ? String(filters.minWeight) : ''}
-            onChangeText={v =>
-              onChange({ minWeight: v ? parseFloat(v) : undefined })
-            }
+            onChangeText={v => onChange({ minWeight: v ? parseFloat(v) : undefined })}
           />
         </View>
         <View style={filterStyles.half}>
@@ -255,25 +233,25 @@ const filterStyles = StyleSheet.create({
 const EMPTY_FILTERS: TripFilters = {};
 
 export default function HomeScreen() {
-  const { profile, signOut } = useAuth();
-  const carrierId = profile?.role === 'carrier' ? profile.uid : undefined;
+  const { user, profile, signOut } = useAuth();
+  const isConnected = !!user;
+  const isCarrier = profile?.role === 'carrier';
+
+  // Le transporteur voit ses propres trajets, les autres voient tous les trajets actifs
+  const carrierId = isCarrier ? profile.uid : undefined;
   const { trips, loading, applyFilters } = useTrips(carrierId);
   const router = useRouter();
 
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<TripFilters>(EMPTY_FILTERS);
 
-  // Filtrage client-side
   const filteredTrips = useMemo(() => applyFilters(trips, filters), [trips, filters]);
-
   const hasActiveFilters = Object.values(filters).some(v => v !== undefined);
 
   const updateFilter = (partial: Partial<TripFilters>) =>
     setFilters(prev => ({ ...prev, ...partial }));
-
   const resetFilters = () => setFilters(EMPTY_FILTERS);
 
-  // Chips des filtres actifs
   const activeChips = useMemo(() => {
     const chips: { key: string; label: string }[] = [];
     if (filters.departure) chips.push({ key: 'departure', label: `Départ: ${filters.departure}` });
@@ -286,36 +264,68 @@ export default function HomeScreen() {
 
   return (
     <Container style={styles.container}>
-      {/* ── Header utilisateur ── */}
+      {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.userInfo}>
-          <Avatar
-            name={profile?.displayName || 'User'}
-            source={profile?.photoURL ? { uri: profile.photoURL } : undefined}
-            size="md"
-          />
-          <View>
-            <Text style={styles.userName}>{profile?.displayName || 'Bonjour !'}</Text>
-            <View style={styles.roleRow}>
-              <Text style={styles.userRole}>
-                {profile?.role === 'carrier' ? '✈️ Transporteur' : '📦 Membre'}
-              </Text>
-              {profile?.kycVerified && (
-                <View style={styles.kycBadge}>
-                  <Ionicons name="shield-checkmark" size={10} color={colors.success} />
-                  <Text style={styles.kycBadgeText}>Vérifié</Text>
+          {isConnected ? (
+            <>
+              <Avatar
+                name={profile?.displayName || 'User'}
+                source={profile?.photoURL ? { uri: profile.photoURL } : undefined}
+                size="md"
+              />
+              <View>
+                <Text style={styles.userName}>{profile?.displayName || 'Bonjour !'}</Text>
+                <View style={styles.roleRow}>
+                  <Text style={styles.userRole}>
+                    {isCarrier ? '✈️ Transporteur' : '📦 Membre'}
+                  </Text>
+                  {profile?.kycVerified && (
+                    <View style={styles.kycBadge}>
+                      <Ionicons name="shield-checkmark" size={10} color={colors.success} />
+                      <Text style={styles.kycBadgeText}>Vérifié</Text>
+                    </View>
+                  )}
                 </View>
-              )}
+              </View>
+            </>
+          ) : (
+            <View>
+              <Text style={styles.userName}>SpaceBag ✈️</Text>
+              <Text style={styles.userRole}>Parcourez les trajets disponibles</Text>
             </View>
-          </View>
+          )}
         </View>
-        <TouchableOpacity onPress={signOut} style={styles.logoutBtn}>
-          <Ionicons name="log-out-outline" size={22} color={colors.textSecondary} />
-        </TouchableOpacity>
+
+        {isConnected ? (
+          <TouchableOpacity onPress={signOut} style={styles.logoutBtn}>
+            <Ionicons name="log-out-outline" size={22} color={colors.textSecondary} />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            onPress={() => router.push('/(auth)/login')}
+            style={styles.loginBtn}
+          >
+            <Text style={styles.loginBtnText}>Connexion</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* ── Barre de recherche rapide ── */}
-      {profile?.role !== 'carrier' && (
+      {/* ── Bannière "Connectez-vous" pour les utilisateurs non connectés ── */}
+      {!isConnected && (
+        <TouchableOpacity
+          style={styles.loginBanner}
+          onPress={() => router.push('/(auth)/signup')}
+        >
+          <Ionicons name="person-add-outline" size={18} color={colors.primary} />
+          <Text style={styles.loginBannerText}>
+            Créez un compte pour envoyer un colis →
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {/* ── Barre de recherche rapide (tous les utilisateurs) ── */}
+      {!isCarrier && (
         <View style={styles.searchBar}>
           <View style={styles.searchInputWrapper}>
             <Ionicons name="search-outline" size={18} color={colors.textTertiary} />
@@ -325,7 +335,6 @@ export default function HomeScreen() {
               placeholderTextColor={colors.textTertiary}
               value={filters.departure || filters.arrival || ''}
               onChangeText={v => {
-                // Recherche simple sur les deux champs
                 updateFilter({ departure: v || undefined, arrival: v || undefined });
               }}
             />
@@ -349,7 +358,7 @@ export default function HomeScreen() {
       )}
 
       {/* ── Panneau filtres avancés ── */}
-      {showFilters && profile?.role !== 'carrier' && (
+      {showFilters && !isCarrier && (
         <FilterPanel filters={filters} onChange={updateFilter} onReset={resetFilters} />
       )}
 
@@ -364,9 +373,7 @@ export default function HomeScreen() {
             <FilterChip
               key={chip.key}
               label={chip.label}
-              onRemove={() =>
-                updateFilter({ [chip.key]: undefined } as Partial<TripFilters>)
-              }
+              onRemove={() => updateFilter({ [chip.key]: undefined } as Partial<TripFilters>)}
             />
           ))}
         </ScrollView>
@@ -376,7 +383,7 @@ export default function HomeScreen() {
       <View style={styles.sectionHeader}>
         <View>
           <Text style={styles.sectionTitle}>
-            {profile?.role === 'carrier' ? 'Mes trajets' : 'Trajets disponibles'}
+            {isCarrier ? 'Mes trajets' : 'Trajets disponibles'}
           </Text>
           {!loading && (
             <Text style={styles.sectionCount}>
@@ -385,23 +392,15 @@ export default function HomeScreen() {
             </Text>
           )}
         </View>
-        {profile?.role === 'carrier' ? (
-          <Button
-            variant="primary"
-            size="sm"
-            onPress={() => router.push('/trips/new')}
-          >
+        {isCarrier ? (
+          <Button variant="primary" size="sm" onPress={() => router.push('/trips/new')}>
             + Publier
           </Button>
-        ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            onPress={() => router.push('/(tabs)/requests')}
-          >
+        ) : isConnected ? (
+          <Button variant="outline" size="sm" onPress={() => router.push('/(tabs)/requests')}>
             Mes demandes
           </Button>
-        )}
+        ) : null}
       </View>
 
       {/* ── Liste des trajets ── */}
@@ -427,21 +426,16 @@ export default function HomeScreen() {
               <Text style={styles.emptyTitle}>
                 {hasActiveFilters
                   ? 'Aucun trajet ne correspond à vos critères'
-                  : profile?.role === 'carrier'
-                  ? 'Vous n\'avez pas encore publié de trajet'
-                  : 'Aucun trajet disponible'}
+                  : isCarrier
+                  ? "Vous n'avez pas encore publié de trajet"
+                  : 'Aucun trajet disponible pour le moment'}
               </Text>
               {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onPress={resetFilters}
-                  style={{ marginTop: spacing.md }}
-                >
+                <Button variant="ghost" size="sm" onPress={resetFilters} style={{ marginTop: spacing.md }}>
                   Réinitialiser les filtres
                 </Button>
               )}
-              {profile?.role === 'carrier' && !hasActiveFilters && (
+              {isCarrier && !hasActiveFilters && (
                 <Button
                   variant="primary"
                   size="sm"
@@ -449,6 +443,16 @@ export default function HomeScreen() {
                   style={{ marginTop: spacing.md }}
                 >
                   Publier mon premier trajet
+                </Button>
+              )}
+              {!isConnected && !hasActiveFilters && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onPress={() => router.push('/(auth)/signup')}
+                  style={{ marginTop: spacing.md }}
+                >
+                  Créer un compte
                 </Button>
               )}
             </View>
@@ -464,7 +468,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
-  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -488,8 +491,28 @@ const styles = StyleSheet.create({
   },
   kycBadgeText: { fontSize: 9, fontWeight: '700', color: colors.success },
   logoutBtn: { padding: spacing.xs },
+  loginBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  loginBtnText: { ...typography.captionBold, color: colors.black },
 
-  // Barre de recherche
+  loginBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.primary + '15',
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+  },
+  loginBannerText: { ...typography.caption, color: colors.primary, flex: 1 },
+
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -529,16 +552,12 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: colors.primaryTint,
   },
-
-  // Chips
   chipsRow: {
     flexDirection: 'row',
     gap: spacing.xs,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
   },
-
-  // Section header
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -549,7 +568,6 @@ const styles = StyleSheet.create({
   sectionTitle: { ...typography.h2, color: colors.text },
   sectionCount: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
 
-  // Chargement
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -557,11 +575,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   loadingText: { ...typography.body, color: colors.textSecondary },
-
-  // Liste
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
 
-  // Carte trajet
   tripCard: { padding: spacing.md, backgroundColor: colors.backgroundSecondary, gap: spacing.sm },
   routeRow: { flexDirection: 'row', alignItems: 'center' },
   cityCol: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -583,8 +598,6 @@ const styles = StyleSheet.create({
   },
   detailItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   detailText: { ...typography.tiny, color: colors.textSecondary },
-
-  // Capacité
   capacityRow: { gap: 4 },
   capacityTrack: {
     height: 5,
@@ -594,8 +607,6 @@ const styles = StyleSheet.create({
   },
   capacityFill: { height: '100%', borderRadius: borderRadius.full },
   capacityText: { ...typography.tiny },
-
-  // Empty state
   emptyContainer: {
     padding: spacing.xxl,
     alignItems: 'center',

@@ -1,4 +1,12 @@
-export type UserRole = 'carrier' | 'member';
+export type UserRole = 'carrier' | 'member' | 'admin';
+
+export type KycStatus = 'not_submitted' | 'pending' | 'verified' | 'rejected';
+
+export interface KycDocuments {
+  idPhotoUrl?: string;
+  selfieUrl?: string;
+  addressProofUrl?: string;
+}
 
 export interface UserProfile {
   uid: string;
@@ -11,6 +19,14 @@ export interface UserProfile {
   /** Vérification d'identité (KYC) */
   kycVerified?: boolean;
   kycIdPhotoUrl?: string;
+  /** Statut KYC détaillé */
+  kycStatus?: KycStatus;
+  /** Documents soumis pour le KYC */
+  kycDocuments?: KycDocuments;
+  /** Motif de rejet KYC */
+  kycRejectionReason?: string;
+  /** Date d'acceptation des CGU (timestamp) */
+  acceptedCguAt?: number;
 }
 
 export interface Trip {
@@ -85,4 +101,17 @@ export interface Review {
   rating: number;
   comment?: string;
   createdAt: number;
+}
+
+/** Suivi de colis (simulation GPS) */
+export interface TrackingPoint {
+  id: string;
+  requestId: string;
+  lat: number;
+  lng: number;
+  timestamp: number;
+  /** Étape du trajet */
+  status: 'picked_up' | 'in_transit' | 'near_destination' | 'delivered';
+  /** Progression 0-100 */
+  progressPercent: number;
 }

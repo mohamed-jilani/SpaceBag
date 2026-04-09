@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Container, Button, Input, Avatar } from '@/components/ui';
 import { colors, spacing, typography, borderRadius } from '@/constants/design';
 import { useAuth } from '@/context/AuthContext';
@@ -9,7 +10,8 @@ import { uploadImage } from '@/lib/cloudinary';
 import { getAverageRating } from '@/services/reviews';
 
 export default function ProfileScreen() {
-  const { profile, updateProfile, signOut } = useAuth();
+  const { profile, updateProfile, signOut, refreshProfile } = useAuth();
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(profile?.displayName || '');
   const [phone, setPhone] = useState(profile?.phoneNumber || '');
@@ -111,22 +113,54 @@ export default function ProfileScreen() {
         {/* KYC section */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Vérification d'identité (KYC)</Text>
+            <Text style={styles.cardTitle}>Vérification d'identité</Text>
           </View>
-          {profile?.kycVerified ? (
+          {profile?.kycStatus === 'verified' || profile?.kycVerified ? (
             <View style={styles.kycVerifiedRow}>
               <Ionicons name="shield-checkmark" size={20} color={colors.success} />
-              <Text style={[styles.infoValue, { color: colors.success }]}>
-                Identité vérifiée
-              </Text>
+              <Text style={[styles.infoValue, { color: colors.success }]}>Identité vérifiée ✓</Text>
+            </View>
+          ) : profile?.kycStatus === 'pending' ? (
+            <View style={styles.kycPendingRow}>
+              <Ionicons name="time-outline" size={20} color={colors.warning} />
+              <Text style={[styles.kycPendingText, { color: colors.warning }]}>En cours de vérification…</Text>
+            </View>
+          ) : profile?.kycStatus === 'rejected' ? (
+            <View style={{ gap: spacing.sm }}>
+              <View style={styles.kycPendingRow}>
+                <Ionicons name="close-circle-outline" size={20} color={colors.error} />
+                <Text style={[styles.kycPendingText, { color: colors.error }]}>
+                  Dossier rejeté{profile.kycRejectionReason ? ` : ${profile.kycRejectionReason}` : ''}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => router.push('/kyc/submit')} style={styles.kycLink}>
+                <Text style={styles.kycLinkText}>Resoumettre mon dossier →</Text>
+              </TouchableOpacity>
             </View>
           ) : (
-            <View style={styles.kycPendingRow}>
-              <Ionicons name="shield-outline" size={20} color={colors.textSecondary} />
-              <Text style={styles.kycPendingText}>Non vérifié — fonctionnalité à venir</Text>
+            <View style={{ gap: spacing.sm }}>
+              <View style={styles.kycPendingRow}>
+                <Ionicons name="shield-outline" size={20} color={colors.textSecondary} />
+                <Text style={styles.kycPendingText}>Non vérifié</Text>
+              </View>
+              <TouchableOpacity onPress={() => router.push('/kyc/submit')} style={styles.kycLink}>
+                <Text style={styles.kycLinkText}>Vérifier mon identité →</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
+
+        {/* Lien admin */}
+        {profile?.role === 'admin' && (
+          <TouchableOpacity
+            style={styles.adminLink}
+            onPress={() => router.push('/admin/kyc')}
+          >
+            <Ionicons name="shield-half-outline" size={18} color={colors.accent} />
+            <Text style={styles.adminLinkText}>Administration KYC</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.accent} />
+          </TouchableOpacity>
+        )}
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
@@ -349,5 +383,29 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     borderColor: colors.error,
     borderWidth: 1,
+  },
+  kycLink: {
+    alignSelf: 'flex-start',
+  },
+  kycLinkText: {
+    ...typography.captionBold,
+    color: colors.primary,
+    textDecorationLine: 'underline',
+  },
+  adminLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.accent + '15',
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.accent + '40',
+    marginBottom: spacing.md,
+  },
+  adminLinkText: {
+    ...typography.bodyBold,
+    color: colors.accent,
+    flex: 1,
   },
 });

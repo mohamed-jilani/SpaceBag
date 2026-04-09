@@ -202,6 +202,7 @@ export default function TripDetailsScreen() {
     );
   }
 
+  const isConnected = !!user;
   const isCarrier = trip.carrierId === user?.uid;
   const isMember = profile?.role === 'member' && !isCarrier;
   const isTripFull = trip.status === 'full';
@@ -322,6 +323,31 @@ export default function TripDetailsScreen() {
             </View>
           ) : null}
         </Card>
+
+        {/* ── CTA pour utilisateurs non connectés ── */}
+        {!isConnected && (
+          <View style={styles.actionSection}>
+            <Card variant="elevated" style={styles.formCard}>
+              <Ionicons name="lock-closed-outline" size={32} color={colors.textTertiary} style={{ alignSelf: 'center' }} />
+              <Text style={[styles.formTitle, { textAlign: 'center' }]}>
+                Connectez-vous pour envoyer un colis
+              </Text>
+              <Button
+                variant="primary"
+                onPress={() => router.push('/(auth)/login')}
+                style={{ marginTop: spacing.xs }}
+              >
+                Se connecter
+              </Button>
+              <Button
+                variant="ghost"
+                onPress={() => router.push('/(auth)/signup')}
+              >
+                Créer un compte
+              </Button>
+            </Card>
+          </View>
+        )}
 
         {/* ── Section membre : demande ── */}
         {isMember && (

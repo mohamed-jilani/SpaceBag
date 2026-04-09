@@ -1,31 +1,40 @@
 {
   "expo": {
-    "name": "blink-expo-starter",
-    "slug": "blink-expo-starter",
+    "name": "SpaceBag",
+    "slug": "spacebag",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "blinkexpo",
+    "scheme": "spacebag",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0F172A"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.blink.expostarter"
+      "bundleIdentifier": "com.spacebag.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "SpaceBag utilise la caméra pour scanner les QR codes de livraison.",
+        "NSLocationWhenInUseUsageDescription": "SpaceBag utilise votre localisation pour le suivi de colis."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0F172A"
       },
-      "package": "com.blink.expostarter"
+      "package": "com.spacebag.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -35,7 +44,14 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-splash-screen",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "SpaceBag utilise la caméra pour scanner les QR codes de livraison."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
